@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "phinite": {
+      "command": "node",
+      "args": ["C:\\Users\\ASUS\\Videos\\Phinite\\Cowork\\Phinite Plugin\\servers\\server.js"],
+      "env": {
+        "PHINITE_APP_BASE_URL": "https://app-dev.phinite.ai/api/v1",
+        "PHINITE_A2A_BASE_URL": "https://ai-core-dev.phinite.ai"
+      }
+    }
+  }
+}

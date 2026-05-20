@@ -1,0 +1,19 @@
+# Secrets — copy credentials.example.json → credentials.json and fill in.
+credentials.json
+
+# Runtime state files written by server.js
+servers/sessions.json
+servers/sessions.json.tmp
+
+# Packaged plugin output
+*.plugin
+
+# Local logs (if hooks/log-api-call.sh runs)
+logs/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/

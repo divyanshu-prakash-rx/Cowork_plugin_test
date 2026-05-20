@@ -1,0 +1,38 @@
+{
+  "name": "phinite-agents",
+  "version": "0.4.0",
+  "description": "Connect Claude to Phinite agents — list and invoke published agents, and create new agent flows.",
+  "author": {
+    "name": "Phinite"
+  },
+  "settings": {
+    "PHINITE_API_KEY": {
+      "label": "Phinite API Key",
+      "description": "Your Phinite API key. Required for the registry endpoint and flow creation. Find it in the Phinite dashboard.",
+      "type": "secret",
+      "required": true,
+      "placeholder": "eyJ..."
+    },
+    "PHINITE_WORKSPACE_ID": {
+      "label": "Workspace ID",
+      "description": "Your Phinite workspace ID. Required to list and invoke agents. Find it in the Phinite dashboard URL.",
+      "type": "string",
+      "required": true,
+      "placeholder": "aTIVxzm"
+    },
+    "PHINITE_APP_BASE_URL": {
+      "label": "App API base URL",
+      "description": "Base URL of the Phinite REST API. Override only for staging/local backends.",
+      "type": "string",
+      "required": false,
+      "default": "https://app-dev.phinite.ai/api/v1"
+    },
+    "PHINITE_A2A_BASE_URL": {
+      "label": "A2A endpoint base URL",
+      "description": "Base URL of the Phinite A2A (Agent-to-Agent) server. Override only for staging/local backends.",
+      "type": "string",
+      "required": false,
+      "default": "https://ai-core-dev.phinite.ai"
+    }
+  }
+}

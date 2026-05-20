@@ -1,0 +1,14 @@
+{
+  "PostToolUse": [
+    {
+      "matcher": "mcp__phinite__phinite_list_agents|mcp__phinite__phinite_invoke_agent",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-api-call.sh",
+          "timeout": 5
+        }
+      ]
+    }
+  ]
+}
