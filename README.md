@@ -108,10 +108,9 @@ Compress-Archive -Path * -DestinationPath phinite.plugin -Force
 Correct zip structure:
 
 ```
-✅ Correct                              ❌ Wrong
-.claude-plugin/plugin.json              Phinite Plugin/.claude-plugin/plugin.json
-.mcp.json                               Phinite Plugin/.mcp.json
-servers/server.js                       Phinite Plugin/servers/server.js
+.claude-plugin/plugin.json             
+.mcp.json                            
+servers/server.js                       
 credentials.example.json
 ```
 
