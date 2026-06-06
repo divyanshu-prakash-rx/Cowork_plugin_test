@@ -84,11 +84,11 @@ You generate; the tool packages.
     { "id": "end", "task": "End" }
   ],
   "edges": [
-    ["start",            "intake-agent",     "new_inquiry_received"],
-    ["child-sentiment",  "intake-agent",     "sentiment_analysis"],
-    ["intake-agent",     "fulfilment-agent", "requirements_extracted"],
-    ["fulfilment-agent", "end",              "request_completed"],
-    ["intake-agent",     "end",              "invalid_request"]
+    ["start",         "intake-agent",     "new_inquiry_received"],
+    ["intake-agent",  "child-sentiment",  "sentiment_analysis"],
+    ["intake-agent",  "fulfilment-agent", "requirements_extracted"],
+    ["fulfilment-agent", "end",           "request_completed"],
+    ["intake-agent",  "end",              "invalid_request"]
   ],
   "blocks": [
     {
@@ -145,7 +145,7 @@ You generate; the tool packages.
 
 **Edges**
 - Tuples `[source, target, label]`. Every master agent must have at least one incoming and one outgoing edge.
-- Child agents connect ONLY to their parent master agent (bidirectional).
+- Child agent edges go FROM the parent master TO the child: `["master-id", "child-id", "label"]`. The master is the caller; the child is the callee. Never list the child as source.
 - No orphans.
 
 **Blocks**

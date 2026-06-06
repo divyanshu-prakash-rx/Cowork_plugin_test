@@ -129,17 +129,31 @@ function buildNodes(blueprintNodes) {
 
 // ─── Edge construction ───────────────────────────────────────────────────────
 // Port of edges_tool_args from flow_builder.py.
+//
+// Child↔master edges MUST go parent → child (master is the caller, child is
+// the callee). Blueprints sometimes list these as child → master — we silently
+// flip them here so the platform always receives the correct direction.
+// Only flip when source is a child AND target is a task (master) node; edges
+// to/from start, end, or another child are left as-is.
 function buildEdges(blueprintEdges, builtNodes) {
   const childIds = new Set(builtNodes.filter((n) => n.type === 'child').map((n) => n.id));
+  const taskIds  = new Set(builtNodes.filter((n) => n.type === 'task').map((n) => n.id));
+
   return (blueprintEdges || []).map((edge) => {
     const [source, target, label] = edge;
+
+    // If the blueprint says child → master, flip to master → child.
+    const needsFlip  = childIds.has(source) && taskIds.has(target);
+    const src        = needsFlip ? target : source;
+    const tgt        = needsFlip ? source : target;
+
     return {
-      source,
+      source:       src,
       sourceHandle: 'right',
-      target,
+      target:       tgt,
       targetHandle: null,
       type: 'custom',
-      id: `reactflow__edge-${source}-${target}`,
+      id: `reactflow__edge-${src}-${tgt}`,
       data: {
         label: label || '',
         bidirectionalArrows: childIds.has(source) || childIds.has(target),

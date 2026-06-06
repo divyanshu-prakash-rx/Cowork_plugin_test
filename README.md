@@ -214,9 +214,9 @@ Turn 2:  "Make it shorter and remove the emoji"
     { "id": "end", "task": "End" }
   ],
   "edges": [
-    ["start",          "intake-agent",  "new_inquiry_received"],
-    ["child-sentiment","intake-agent",  "sentiment_analysis"],
-    ["intake-agent",   "end",           "request_completed"]
+    ["start",        "intake-agent",    "new_inquiry_received"],
+    ["intake-agent", "child-sentiment", "sentiment_analysis"],
+    ["intake-agent", "end",             "request_completed"]
   ],
   "blocks": [
     {
