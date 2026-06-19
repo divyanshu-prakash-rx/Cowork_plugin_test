@@ -2,7 +2,7 @@
   "mcpServers": {
     "phinite": {
       "type": "http",
-      "url": "https://mcp.phinite.ai",
+      "url": "https://phinite-mcp.onrender.com",
       "headers": {
         "Authorization": "Bearer ${user_config.phinite_api_key}"
       }

@@ -69,22 +69,24 @@ Call `phinite_invoke_agent` with:
 |----------|------|-------|
 | `agentId` | string | The `id` from `phinite_list_agents` |
 | `message` | string | The user's question or task as plain text |
-| `conversationMode` | `"new"` \| `"continue"` | **Required.** See below. |
+| `contextId` | string (optional) | To CONTINUE a conversation, pass the `contextId` from this agent's previous reply. Omit to start fresh. |
+| `taskId` | string (optional) | To CONTINUE a conversation, pass the `taskId` from this agent's previous reply. Send together with `contextId`. |
 
-**`conversationMode` rules:**
+**Conversation continuity is carried by you, not the server.** Every reply
+returns a `contextId` and a `taskId`. Remember them.
 
-- `"new"` — the user is asking about a different subject or starting fresh. Use this on the first call to any agent, or when the topic changes.
-- `"continue"` — the user is following up on what this agent just said (e.g. "make it shorter", "now revise it", "explain that last point"). Use this for follow-ups to the same agent.
+- **New conversation** (first call, or a different subject) → omit `contextId`/`taskId`.
+- **Continue** (follow-up like "make it shorter", "now revise it", "explain that") → pass back BOTH the `contextId` and `taskId` from this agent's previous reply.
 
-You never pass a session token — the platform tracks the conversation and
-continuity is handled automatically when `"continue"` is used.
+The platform needs **both** IDs to load prior history. If you don't pass them, it
+simply starts a fresh conversation.
 
 The response includes:
 
 - `answer` — the agent's reply text
+- `contextId`, `taskId` — **pass these back** to continue this conversation
 - `status` — e.g. `TASK_STATE_INPUT_REQUIRED` (conversation open — not an error), `TASK_STATE_COMPLETED`, `TASK_STATE_FAILED`
-- `continued` — `true` if an existing conversation was continued
-- `_debug` — diagnostic info (server version, session state)
+- `continued` — `true` if you passed IDs in to continue
 
 ### Routing rules
 
