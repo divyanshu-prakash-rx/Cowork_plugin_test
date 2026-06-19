@@ -1,0 +1,19 @@
+{
+  "name": "phinite",
+  "owner": {
+    "name": "Phinite",
+    "url": "https://phinite.ai"
+  },
+  "metadata": {
+    "description": "Phinite's official plugin marketplace.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "phinite-agents",
+      "source": "./phinite-agents",
+      "description": "Discover and invoke Phinite agents from Claude — connects to the hosted Phinite MCP server.",
+      "version": "1.0.0"
+    }
+  ]
+}
