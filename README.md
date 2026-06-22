@@ -1,13 +1,14 @@
 # Phinite Marketplace
 
 A Claude (Cowork) **plugin marketplace** containing the **Phinite Agents** plugin.
-This is the **remote** variant: the plugin is a thin connector that points at a
+This is the **remote** variant: the plugin is a thin connector that points at the
 **hosted Phinite MCP server** — there is no server code in this repo, just the
-connector config and skill.
+connector config and skill. Authentication is **OAuth** (sign in with your
+Phinite account).
 
 ```
-Claude (Cowork) ──MCP over HTTPS──▶ hosted Phinite MCP server
-                  Authorization: Bearer <your Phinite API key>
+Claude (Cowork) ──MCP over HTTPS──▶ https://webhook.dev.phinite.ai/api/v1/ai/mcp
+                  OAuth (sign in to Phinite, no key pasted)
 ```
 
 ---
@@ -20,14 +21,14 @@ phinite-marketplace/
 │   └── marketplace.json              ← the marketplace registry (lists the plugin)
 └── phinite-agents/                   ← the plugin
     ├── .claude-plugin/
-    │   └── plugin.json               ← plugin identity + the API-key setting (userConfig)
-    ├── .mcp.json                     ← the remote connector (hosted URL + auth header)
+    │   └── plugin.json               ← plugin identity (name, version, description)
+    ├── .mcp.json                     ← the remote connector (hosted MCP URL)
     └── skills/
         └── phinite-agents/SKILL.md   ← when/how Claude uses the plugin
 ```
 
-No `servers/` folder — the MCP server is **hosted elsewhere**; this plugin only
-connects to it.
+No `servers/` folder — the MCP server is **hosted inside Phinite**; this plugin
+only connects to it.
 
 ---
 
@@ -39,46 +40,59 @@ the plugins it offers (here, one: `phinite-agents`, with its `source` path).
 This is the file Claude reads when you run `/plugin marketplace add`.
 
 ### `phinite-agents/.claude-plugin/plugin.json`
-The plugin manifest — `name`, `version`, `description`, and the **`userConfig`**
-block. `userConfig` declares the single value the user is prompted for on install:
-
-| Field | Purpose |
-|-------|---------|
-| `phinite_api_key` | The user's Phinite API key (JWT, `eyJ...`). `sensitive: true` → stored in the **system keychain**, never in chat. `required: true`. Workspace + org are derived from the key, so it's the only input. |
+The plugin manifest — just `name`, `version`, `description`, `author`. **No
+`userConfig`** and **no API-key field**: auth is OAuth, so the user signs in
+rather than entering anything.
 
 ### `phinite-agents/.mcp.json`
-The **remote connector** config. Tells Claude how to reach the hosted server:
+The **remote connector** config — how Claude reaches the hosted server:
 
 ```json
 {
   "mcpServers": {
     "phinite": {
       "type": "http",
-      "url": "https://<your-hosted-mcp-url>",
-      "headers": {
-        "Authorization": "Bearer ${user_config.phinite_api_key}"
-      }
+      "url": "https://webhook.dev.phinite.ai/api/v1/ai/mcp"
     }
   }
 }
 ```
 
 - **`type: "http"`** — remote connector (not a local process).
-- **`url`** — the hosted Phinite MCP server. **Change this** to your deployed URL.
-- **`headers`** — Claude injects the user's API key (from `userConfig`) as the
-  bearer token on every request. `${user_config.phinite_api_key}` is substituted
-  at runtime.
+- **`url`** — the hosted Phinite MCP endpoint (inside ai-core, public ingress).
+- **No `headers`** — the server is OAuth-protected. On the first call it replies
+  `401` with its OAuth metadata; Cowork runs the sign-in flow automatically and
+  attaches the token on subsequent calls. Nothing to configure here.
+
+---
+
+## How auth works (OAuth)
+
+Fully handled by Cowork — the user types nothing:
+
+```
+1. Cowork → MCP server (no token)
+2. MCP server → 401 + .well-known/oauth-protected-resource pointer
+3. Cowork discovers the auth server, self-registers (Dynamic Client Registration)
+4. User signs into Phinite in the browser (PKCE) → token
+5. Cowork attaches the token on every call; tokens live in the OS keychain
+```
+
+The OAuth endpoints live on the Phinite side (issuer
+`https://webhook.dev.phinite.ai/api/v1/oauth/mcp`): `/authorize`, `/token`,
+`/register`. The plugin needs no OAuth config — discovery does it all.
 
 ---
 
 ## What to set before publishing
 
-1. **`.mcp.json` → `url`** — point it at your deployed MCP server's public URL.
-2. Nothing else — the API key comes from each user at install time via `userConfig`.
+Just confirm **`.mcp.json` → `url`** points at the live MCP endpoint
+(`https://webhook.dev.phinite.ai/api/v1/ai/mcp`). Nothing else — no keys, no
+headers, no userConfig.
 
-> The hosted server must be **publicly reachable** by Cowork **and** able to reach
-> the Phinite backend. Auth is the user's API key via the bearer header (or OAuth,
-> if the header path isn't honored — see the server repo's `oauth-reference.js`).
+> The host must be **publicly reachable** by Cowork **and** able to reach the
+> Phinite backend. `webhook.dev.phinite.ai` is the public ingress to the
+> in-network ai-core server, so both hold.
 
 ---
 
@@ -89,15 +103,16 @@ The **remote connector** config. Tells Claude how to reach the hosted server:
 /plugin install phinite-agents@phinite
 ```
 
-On install, Claude prompts for the **Phinite API Key** (stored in the keychain)
-and connects to the hosted server. No Node.js, no local files.
+On install, the connector hits the server, gets the OAuth challenge, and Claude
+prompts the user to **sign in to Phinite**. After sign-in it just works — no Node,
+no files, no pasted key.
 
 ---
 
 ## Variants (for reference)
 
-| Folder | Type | Server runs |
-|--------|------|-------------|
-| **`phinite-marketplace`** (this) | remote connector | on a hosted server |
-| `Phinite-local` | local (stdio) | on the user's machine |
-| `Phinite_mcp_server` | the hosted server's source | deploy this; point the `url` above at it |
+| Folder | Type | Auth | Server runs |
+|--------|------|------|-------------|
+| **`phinite-marketplace`** (this) | remote connector | **OAuth** | hosted (ai-core) |
+| `Phinite-local` | local (stdio) | chat-paste key | user's machine |
+| `Phinite_mcp_server` | standalone server source | bearer header | deploy anywhere |

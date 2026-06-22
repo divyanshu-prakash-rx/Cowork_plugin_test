@@ -9,20 +9,20 @@ metadata:
   version: "1.0.0"
 ---
 
-## API key
+## Authentication (OAuth)
 
-The Phinite tools authenticate with the user's Phinite API key, which is set in
-**this plugin's settings** at install time and stored securely (system keychain).
-It is sent automatically on every request — the user never pastes it into chat.
+The Phinite tools authenticate via **OAuth** — the user signs into their Phinite
+account when they connect the plugin. There is **no API key to enter** and nothing
+to paste in chat; Cowork handles the sign-in and token automatically.
 
-**If any Phinite tool returns an error starting with `NO_API_KEY`**, the key
-isn't configured. Tell the user:
+**If a Phinite tool returns an auth error** (e.g. `401`, "unauthorized", or a
+sign-in/connect prompt), tell the user:
 
-> *"Your Phinite API key isn't set. Open this plugin's settings and paste your
-> Phinite API key (from the Phinite dashboard → API Keys). Then try again."*
+> *"Please connect the Phinite plugin and sign in to your Phinite account, then
+> try again."*
 
-Do **NOT** ask the user to paste the key into the chat, and do **not** ask for a
-workspace ID or organization ID — those are read from the key automatically.
+Never ask the user to paste an API key, workspace ID, or organization ID — sign-in
+provides all of that.
 
 ## Using Phinite Agent Graphs
 
@@ -97,8 +97,7 @@ The response includes:
 
 ### Error handling
 
-- `NO_API_KEY` → the key isn't set; tell the user to add it in the plugin's settings (see "API key" above). Never ask them to paste it in chat.
-- `401 Unauthorized` → the key is wrong or expired; tell the user to update it in the plugin settings.
-- `403 Forbidden` → the key is valid but lacks access to that agent's workspace/org.
+- `401 Unauthorized` / sign-in prompt → not signed in (or the session expired); tell the user to connect the Phinite plugin and sign in (see "Authentication" above). Never ask them to paste a key in chat.
+- `403 Forbidden` → signed in, but no access to that agent's workspace/org.
 - A2A errors → relay the code and message verbatim.
 - `TASK_STATE_FAILED` → inform the user and offer to retry.

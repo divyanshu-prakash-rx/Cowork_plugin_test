@@ -1,17 +1,8 @@
 {
   "name": "phinite-agents",
   "version": "1.0.0",
-  "description": "Connect Claude to the Phinite platform — discover and invoke published agents.",
+  "description": "Connect Claude to the Phinite platform — discover and invoke published agents. Sign in with your Phinite account (OAuth).",
   "author": {
     "name": "Phinite"
-  },
-  "userConfig": {
-    "phinite_api_key": {
-      "type": "string",
-      "title": "Phinite API Key",
-      "description": "Your Phinite API key (JWT starting with eyJ...) from the Phinite dashboard → API Keys. Your workspace and organization are read from the key automatically — this is the only value you need to enter. Stored securely in your system keychain.",
-      "sensitive": true,
-      "required": true
-    }
   }
 }
