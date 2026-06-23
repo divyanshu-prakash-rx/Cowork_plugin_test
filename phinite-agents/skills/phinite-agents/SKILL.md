@@ -6,7 +6,7 @@ description: >
   "find an agent that can do X", "ask Phinite", or routes a domain-specific
   question to a specialized AI agent on the Phinite platform.
 metadata:
-  version: "1.1.0"
+  version: "2.0.0"
 ---
 
 ## Authentication
@@ -18,72 +18,80 @@ paste in chat.
 If a tool returns an auth error (`401`, "unauthorized", or a connect/sign-in
 prompt), tell the user to **connect the Phinite plugin and sign in**, then retry.
 
-## Discover agents
+## Tools
 
-| Situation | Tool |
-|-----------|------|
-| "What agents do I have?" / you need the full list | `phinite_list_agents` |
-| Find an agent for a task, ID unknown | `phinite_search_agents` |
-| You have an agent ID and want its full record | `phinite_discover_agent` |
+The plugin exposes three tools:
 
-- `phinite_search_agents` — pass `query` (natural language), optional `limit`,
-  optional `tags`. Prefer this for routing by capability. Use a result's `id`
-  as `agentId`. If it returns nothing, fall back to `phinite_list_agents`.
-- `phinite_list_agents` — no arguments; returns every live agent (`id`, `name`,
-  `description`, `flowid`, `status`, `skills`, `tools`). Use `id` as `agentId`.
-- `phinite_discover_agent` — pass `agentId`; returns that agent's full record.
+| Tool | Use it to |
+|------|-----------|
+| `discover_agents` | Find agents matching what the user needs (natural-language search). |
+| `list_agents` | List every published agent in the workspace. |
+| `call_agent` | Send a message to an agent and get its reply. |
 
-## Invoke an agent
+## Finding the right agent
 
-`phinite_invoke_agent` arguments:
+- **`discover_agents`** — preferred for routing. Arguments:
+  - `query` — natural-language description of what's needed (matched against agent
+    name, description, and skills).
+  - `status` (optional) — registry status filter, e.g. `LIVE`, `TEST`.
+  - `limit` (optional) — max results (default 5).
+- **`list_agents`** — no arguments; returns every published agent in the workspace.
+
+Both return agent summaries with **`registry_id`**, `name`, `description`,
+`skills`, `status`, `flow_id`. Use the **`registry_id`** as the agent identifier
+for `call_agent`. If `discover_agents` returns nothing relevant, fall back to
+`list_agents`.
+
+## Talking to an agent — `call_agent`
+
+Arguments:
 
 | Argument | Required | Notes |
 |----------|----------|-------|
-| `agentId` | yes | The `id` from list/search/discover |
+| `registry_id` | yes | The agent's id from `discover_agents` / `list_agents` |
 | `message` | yes | The user's question or task as plain text |
-| `contextId` | no | The conversation thread id — pass it back to continue |
-| `taskId` | no | The task id — pass it back to continue |
+| `task_id` | no | The task id from a previous reply — pass it back to continue |
+
+The reply is **text**. When the agent has started a task, the text ends with a
+block like:
+
+```
+task_id: <id>
+context_id: <id>
+state: <TASK_STATE_...>
+Pass task_id on the next call_agent to continue this conversation.
+```
+
+`task_id` is what keeps the conversation going. Getting it is the goal of the
+opening exchange.
 
 ### How a conversation works (read carefully)
 
-A reply may **not** include a `taskId` right away. The `taskId` is what you carry
-to continue a conversation, so getting it is the goal of the opening exchange.
+**1. First call** — send `registry_id` + `message` (no `task_id`). Read the reply.
 
-**1. First call** — send just `agentId` + `message` (no `contextId`/`taskId`).
-The reply will include a **`contextId`**. It may or may not include a `taskId` yet.
-
-**2. If the agent asks for credentials / authorization** — the reply will contain
-a **link** (the agent needs the user to authorize or provide something), and there
-will be **no `taskId`** yet. Do this:
+**2. If the agent needs credentials / setup** — the reply will say it requires
+credential setup and include a **link** (e.g. *"Open this link to connect tools
+and save config: …"*), and there will be **no `task_id`** yet. Do this:
    - Show the user the link and ask them to complete it.
-   - After they confirm they're done, **invoke again with full context** — pass
-     the **`contextId`** from the previous reply (and any `taskId` you have) along
-     with the user's intent.
-   - **Repeat** (re-invoke with the `contextId`) until the reply comes back **with
-     a `taskId`**.
+   - After they confirm they're done, **call `call_agent` again with the same
+     `registry_id` and `message`**.
+   - **Repeat** until the reply comes back **with a `task_id`**.
 
-**3. Once you have a `taskId`** — store **both** `contextId` and `taskId`. From
-then on, pass **both** on **every** call to this agent for the rest of the
-conversation. This is what keeps the agent's memory.
+**3. Once you have a `task_id`** — pass it as `task_id` on **every** subsequent
+`call_agent` to that agent for the rest of the conversation. Never drop it
+mid-conversation; that's what keeps the agent's memory.
 
 **4. New conversation** — when the user moves to a genuinely different subject,
-**omit** `contextId` and `taskId` to start fresh (then repeat from step 1).
+**omit** `task_id` to start fresh (then repeat from step 1).
 
-### Quick rules
-- Always send `contextId` + `taskId` together once you have them.
-- Never drop the `taskId` mid-conversation — keep sending it until a new
-  conversation is needed.
-- If a reply has a `contextId` but no `taskId`, you're still in the opening
-  exchange — continue with `contextId` until a `taskId` appears.
-
-The reply includes: `answer`, `contextId`, `taskId` (when available), `status`
-(`TASK_STATE_INPUT_REQUIRED` = open, not an error; `TASK_STATE_COMPLETED`;
-`TASK_STATE_FAILED`).
+> Only `task_id` is passed back to continue — `call_agent` has no `context_id`
+> argument (the server tracks context internally).
 
 ## Routing rules
 
 - Route domain questions directly to the matching agent without asking which one.
-- If it's unclear which agent fits, list/search, pick the best match, then invoke.
+- If it's unclear which agent fits, `discover_agents` (or `list_agents`), pick the
+  best match by `registry_id`, then `call_agent`.
 - Relay the agent's answer faithfully; don't summarise or rewrite unless asked.
 - Never answer from your own knowledge what falls within an agent's domain.
 
@@ -91,7 +99,10 @@ The reply includes: `answer`, `contextId`, `taskId` (when available), `status`
 
 - `401` / connect prompt → not signed in (or session expired); tell the user to
   connect the Phinite plugin and sign in, then retry.
-- `403` → signed in, but no access to that agent's workspace/org.
-- Agent returns a credentials/authorization link → see Invoke step 2 above.
-- `TASK_STATE_FAILED` → inform the user and offer to retry.
-- Other errors → relay the code and message verbatim.
+- Agent reply asks for credential setup with a link → see "Talking to an agent"
+  step 2 (user completes the link, then re-call until a `task_id` appears).
+- Reply marked failed (`TASK_STATE_FAILED` / `TASK_STATE_REJECTED`) → inform the
+  user and offer to retry.
+- `Unknown registry` / `registry_id and message are required` → you passed a bad
+  or missing `registry_id`; re-check it against `list_agents` / `discover_agents`.
+- Other errors → relay the message verbatim.
