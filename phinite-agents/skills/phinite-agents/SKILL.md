@@ -6,7 +6,7 @@ description: >
   "find an agent that can do X", "ask Phinite", or routes a domain-specific
   question to a specialized AI agent on the Phinite platform.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 ## Authentication
@@ -110,7 +110,7 @@ Render when the reply contains any of:
 |---|---|
 | 3+ comparable items with 2+ attributes each (products, listings, results, offers) | **Card grid** |
 | One record with many fields | **Detail card** |
-| A request for 2+ pieces of information from the user | **Form** |
+| The agent asks the user to choose or supply anything (preferences, options, filters, details) | **Choice UI / form** — never a bullet list |
 | Line items, amounts, tax, totals, an order or bill | **Invoice / receipt** |
 | Metrics, series, breakdowns — anything countable worth comparing | **KPI tiles + table + chart** |
 | 2+ options weighed on the same attributes | **Comparison table** |
@@ -118,8 +118,28 @@ Render when the reply contains any of:
 | Dated or timed entries (itinerary, schedule, slots) | **Schedule** |
 
 Stay in **plain text** for: a direct answer, a confirmation, a single fact, a
-yes/no, one clarifying question, an error, or a couple of sentences of
-explanation. **Never wrap a one-line answer in a UI** — that is slower and worse.
+yes/no, a single open-ended question that lists no options, an error, or a couple
+of sentences of explanation. **Never wrap a one-line answer in a UI** — that is
+slower and worse.
+
+### When the agent asks for input
+
+If the reply asks the user to choose or supply anything, **do not restate it as a
+bulleted list** — that forces the user to type their answers back by hand.
+
+1. **Enumerated options → multiple choice.** When the agent names the options
+   ("dairy, almond, oat, soy", "whole, 2%, skim"), present them as **selectable
+   choices**, one question per attribute. If the host has a question tool with
+   choice support, prefer it — answers return straight into the conversation with
+   nothing to copy or paste.
+2. **Otherwise render a form artifact** — for many fields at once, or for values
+   that aren't a fixed set (dates, quantities, budgets, free text).
+3. If the agent's list ends in "etc." or "and so on", the set is **open** — add an
+   **Other** choice with a free-text field.
+4. Ask for **only** what the agent asked for. Never invent extra fields, and never
+   drop one because it seems obvious.
+5. Gather **all** outstanding questions in one pass, then send the answers back in
+   a **single** `call_agent` (carrying `task_id`) — not one call per answer.
 
 ### Never invent data
 

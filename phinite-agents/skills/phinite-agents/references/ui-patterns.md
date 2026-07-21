@@ -185,12 +185,46 @@ two-column definition list. Group related fields; don't render a 20-row flat lis
 
 ## Form — the agent needs input
 
-**Use when** the agent asks for 2+ pieces of information.
+**Use when** the agent asks for 2+ pieces of information, or asks for values that
+aren't a fixed set. For a couple of purely multiple-choice questions, prefer the
+host's native question tool instead — the answers come back without copy-paste.
+
+**Pick the control from the question, not by habit:**
+
+| The agent asks for | Control |
+|---|---|
+| One of 2–5 named options | **Radio chips** (all options visible) |
+| One of 6+ named options | `<select>` |
+| Any number of named options | Checkboxes |
+| A quantity, budget, count | `<number>` (+ `min`) |
+| A date / time | `<date>` / `<time>` |
+| Anything open-ended | `<input>` / `<textarea>` |
+
+Never render an enumerated set as a text box — if the agent named the options,
+they must be **clickable**. If the list ended in "etc.", add an **Other** chip
+with a free-text input beside it.
+
+**Radio chips** — the default for a short option set:
+
+```html
+<fieldset style="border:0;padding:0;margin:0 0 16px">
+  <legend style="font-size:13px;color:var(--muted);padding:0 0 6px">Type *</legend>
+  <label class="opt"><input type="radio" name="Type" value="Dairy" required><span>Dairy</span></label>
+  <label class="opt"><input type="radio" name="Type" value="Almond"><span>Almond</span></label>
+  <label class="opt"><input type="radio" name="Type" value="Other"><span>Other</span></label>
+</fieldset>
+<style>
+.opt{display:inline-block;margin:0 8px 8px 0;cursor:pointer}
+.opt input{position:absolute;opacity:0;width:0}
+.opt span{display:inline-block;padding:7px 14px;border:1px solid var(--border);
+ border-radius:999px;background:var(--raised);font-size:14px;transition:.12s}
+.opt input:checked+span{background:var(--accent);color:#fff;border-color:var(--accent)}
+.opt input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+```
 
 **Rules**
-- One field per thing asked. Choose the input type from what's asked: `email`,
-  `tel`, `number`, `date`, `<select>` when the agent listed options, `<textarea>`
-  for free text. Never ask for anything the agent didn't ask for.
+- One field per thing asked. Never ask for anything the agent didn't ask for.
 - Mark required fields; label every input (`<label for>`).
 - End with a **Copy for Claude** button. The artifact cannot message the
   conversation, so the button copies a `key: value` block the user pastes back —
@@ -209,13 +243,22 @@ two-column definition list. Group related fields; don't render a 20-row flat lis
 </form>
 <script>
 function cp(){
-  const out=[...document.querySelectorAll('#f input,#f select,#f textarea')]
-    .filter(e=>e.value.trim()).map(e=>`${e.name}: ${e.value.trim()}`).join('\n');
+  const vals={};
+  document.querySelectorAll('#f input,#f select,#f textarea').forEach(e=>{
+    if((e.type==='radio'||e.type==='checkbox') && !e.checked) return; // skip unselected
+    const v=(e.value||'').trim(); if(!v||!e.name) return;
+    vals[e.name] = vals[e.name] ? vals[e.name]+', '+v : v;            // checkboxes merge
+  });
+  const out=Object.keys(vals).map(k=>k+': '+vals[k]).join('\n');
   navigator.clipboard.writeText(out);
-  document.getElementById('ok').textContent='Copied — paste it back in chat';
+  document.getElementById('ok').textContent = out
+    ? 'Copied — paste it back in chat' : 'Nothing filled in yet';
 }
 </script>
 ```
+
+The `!e.checked` guard matters: without it every radio option gets copied, not the
+chosen one. Checkboxes sharing a `name` merge into one comma-separated line.
 
 ---
 
