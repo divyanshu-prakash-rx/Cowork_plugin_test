@@ -1,118 +1,83 @@
-# Phinite Marketplace
+# Phinite Plugin
 
-A Claude (Cowork) **plugin marketplace** containing the **Phinite Agents** plugin.
-This is the **remote** variant: the plugin is a thin connector that points at the
-**hosted Phinite MCP server** — there is no server code in this repo, just the
-connector config and skill. Authentication is **OAuth** (sign in with your
-Phinite account).
+Bring your **Phinite** AI agents straight into Claude.
 
-```
-Claude (Cowork) ──MCP over HTTPS──▶ https://webhook.dev.phinite.ai/api/v1/ai/mcp
-                  OAuth (sign in to Phinite, no key pasted)
-```
+[Phinite](https://app.phinite.ai/) is where you build and publish AI agents — each one
+described by an **Agent Card** that tells Claude its name, skills, and what it can
+do. This plugin connects Claude to those agents over the open **Agent-to-Agent
+(A2A) protocol**, so you can discover the right agent and put it to work in plain
+language, right inside your conversation. Your whole agent workspace in your claude chat.
 
 ---
 
-## What's in this folder
+The Phinite plugin lives in this GitHub marketplace:
+
+> **https://github.com/divyanshu-prakash-rx/Cowork_plugin_test**
+
+## Install in Cowork (desktop) (Paid version of Claude) - For Free version of Claude, see below
+
+1. Open **Customize → Plugins → Personal**.
+2. Click on **+** sign.
+3. Click on **Add marketplace → Add from a repository**.
+4. Add a marketplace using the GitHub link above.
+5. Install the **Phinite Agents** plugin.
+6. Click on **Manage**
+7. Open **Connectors**, click **Install → Connect**, and sign in to your Phinite account.
+8. Your plugin is now ready to use — just send a request to Claude and it will find the right agent for you.
+
+## Install in Claude Code (CLI / terminal)
 
 ```
-phinite-marketplace/
-├── .claude-plugin/
-│   └── marketplace.json              ← the marketplace registry (lists the plugin)
-└── phinite-agents/                   ← the plugin
-    ├── .claude-plugin/
-    │   └── plugin.json               ← plugin identity (name, version, description)
-    ├── .mcp.json                     ← the remote connector (hosted MCP URL)
-    └── skills/
-        └── phinite-agents/SKILL.md   ← when/how Claude uses the plugin
-```
-
-No `servers/` folder — the MCP server is **hosted inside Phinite**; this plugin
-only connects to it.
-
----
-
-## The config files
-
-### `.claude-plugin/marketplace.json`
-The marketplace registry. Declares the marketplace `name` (`phinite`) and lists
-the plugins it offers (here, one: `phinite-agents`, with its `source` path).
-This is the file Claude reads when you run `/plugin marketplace add`.
-
-### `phinite-agents/.claude-plugin/plugin.json`
-The plugin manifest — just `name`, `version`, `description`, `author`. **No
-`userConfig`** and **no API-key field**: auth is OAuth, so the user signs in
-rather than entering anything.
-
-### `phinite-agents/.mcp.json`
-The **remote connector** config — how Claude reaches the hosted server:
-
-```json
-{
-  "mcpServers": {
-    "phinite": {
-      "type": "http",
-      "url": "https://webhook.dev.phinite.ai/api/v1/ai/mcp"
-    }
-  }
-}
-```
-
-- **`type: "http"`** — remote connector (not a local process).
-- **`url`** — the hosted Phinite MCP endpoint (inside ai-core, public ingress).
-- **No `headers`** — the server is OAuth-protected. On the first call it replies
-  `401` with its OAuth metadata; Cowork runs the sign-in flow automatically and
-  attaches the token on subsequent calls. Nothing to configure here.
-
----
-
-## How auth works (OAuth)
-
-Fully handled by Cowork — the user types nothing:
-
-```
-1. Cowork → MCP server (no token)
-2. MCP server → 401 + .well-known/oauth-protected-resource pointer
-3. Cowork discovers the auth server, self-registers (Dynamic Client Registration)
-4. User signs into Phinite in the browser (PKCE) → token
-5. Cowork attaches the token on every call; tokens live in the OS keychain
-```
-
-The OAuth endpoints live on the Phinite side (issuer
-`https://webhook.dev.phinite.ai/api/v1/oauth/mcp`): `/authorize`, `/token`,
-`/register`. The plugin needs no OAuth config — discovery does it all.
-
----
-
-## What to set before publishing
-
-Just confirm **`.mcp.json` → `url`** points at the live MCP endpoint
-(`https://webhook.dev.phinite.ai/api/v1/ai/mcp`). Nothing else — no keys, no
-headers, no userConfig.
-
-> The host must be **publicly reachable** by Cowork **and** able to reach the
-> Phinite backend. `webhook.dev.phinite.ai` is the public ingress to the
-> in-network ai-core server, so both hold.
-
----
-
-## Install (from this marketplace)
-
-```
-/plugin marketplace add <your-org>/phinite-marketplace
+/plugin marketplace add Auto-AI-Labs/phinite-plugins
 /plugin install phinite-agents@phinite
+/reload-plugins
 ```
 
-On install, the connector hits the server, gets the OAuth challenge, and Claude
-prompts the user to **sign in to Phinite**. After sign-in it just works — no Node,
-no files, no pasted key.
+Now just send this request **Authorize phinite plugin** and sign in to
+Phinite when prompted.
+
+> It's OAuth; you just sign in to your Phinite account.
+> Now your plugin is ready to use — just send a request to Claude and it will find the right agent for you.
+
+## Use it in Claude web (claude.ai) or Free version of Claude
+
+On claude.ai or free version of Claude there's no plugin marketplace — add Phinite as a **custom connector**
+instead:
+
+1. Go to **Settings → Connectors → Add custom connector**.
+2. Paste the Phinite MCP server URL:
+   ```
+   https://app.phinite.ai/api/v1/ai/mcp
+   ```
+3. Click **Add**, then **Connect**, and sign in to your Phinite account.
 
 ---
 
-## Variants (for reference)
+## How to use it
 
-| Folder | Type | Auth | Server runs |
-|--------|------|------|-------------|
-| **`phinite-marketplace`** (this) | remote connector | **OAuth** | hosted (ai-core) |
-| `Phinite-local` | local (stdio) | chat-paste key | user's machine |
-| `Phinite_mcp_server` | standalone server source | bearer header | deploy anywhere |
+Once connected, just talk to Claude — it finds the right agent, runs it, and
+brings back the reply:
+
+```
+"What agents do I have?"
+"Find an agent that can book my appointments"
+"Ask the sales agent to qualify this lead: ..."
+"Now make that shorter"
+```
+
+**Behind the scenes**, the plugin gives Claude three tools (it picks them for you):
+
+- **`discover_agents`** — find the right agent from what you describe.
+- **`list_agents`** — see every agent in your workspace.
+- **`call_agent`** — Invoke an agent to perform tasks.
+
+**Follow-ups stay in the same thread.** When you continue a conversation, Claude
+reuses the agent's task so it remembers the context.
+
+**If an agent needs a tool of its own** (Gmail, Slack, a calendar, etc.), it
+replies with a quick **setup link**. Open it, configure your agent, what it asks for, then tell
+Claude to continue — the agent can now do the task.
+
+---
+
+*You'll need a Phinite account. Build and publish your agents at [phinite.ai](https://app.phinite.ai/sign-up).*

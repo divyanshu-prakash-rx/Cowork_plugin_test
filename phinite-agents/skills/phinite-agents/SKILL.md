@@ -6,7 +6,7 @@ description: >
   "find an agent that can do X", "ask Phinite", or routes a domain-specific
   question to a specialized AI agent on the Phinite platform.
 metadata:
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 ## Authentication
@@ -92,8 +92,61 @@ mid-conversation; that's what keeps the agent's memory.
 - Route domain questions directly to the matching agent without asking which one.
 - If it's unclear which agent fits, `discover_agents` (or `list_agents`), pick the
   best match by `registry_id`, then `call_agent`.
-- Relay the agent's answer faithfully; don't summarise or rewrite unless asked.
+- Relay the agent's answer faithfully; don't summarise or rewrite unless asked —
+  see **Presenting the answer** for how to present it.
 - Never answer from your own knowledge what falls within an agent's domain.
+
+## Presenting the answer
+
+Agent replies arrive as **plain text**. Decide whether that text is better *read*
+or better *seen* — and when it's better seen, build it.
+
+> **The rule:** render UI when the reply has **structure that plain text
+> flattens**. Stay in text when the reply **is** prose.
+
+Render when the reply contains any of:
+
+| In the reply | Render |
+|---|---|
+| 3+ comparable items with 2+ attributes each (products, listings, results, offers) | **Card grid** |
+| One record with many fields | **Detail card** |
+| A request for 2+ pieces of information from the user | **Form** |
+| Line items, amounts, tax, totals, an order or bill | **Invoice / receipt** |
+| Metrics, series, breakdowns — anything countable worth comparing | **KPI tiles + table + chart** |
+| 2+ options weighed on the same attributes | **Comparison table** |
+| A process with stages, or order/ticket status | **Stepper / timeline** |
+| Dated or timed entries (itinerary, schedule, slots) | **Schedule** |
+
+Stay in **plain text** for: a direct answer, a confirmation, a single fact, a
+yes/no, one clarifying question, an error, or a couple of sentences of
+explanation. **Never wrap a one-line answer in a UI** — that is slower and worse.
+
+### Never invent data
+
+The UI shows **only what the agent actually returned**.
+
+- Never add prices, ratings, images, dates, rows, or "sample" values.
+- A field missing from the reply is **left out of the layout** — no placeholders,
+  no empty states, no `N/A` padding.
+- **Use the image URLs the agent returns.** Render them (product photos,
+  thumbnails, avatars) — they carry real meaning. Never invent an image URL or
+  substitute stock imagery for a missing one.
+- Build so a card still reads if an image fails to load (some viewers block
+  remote images): a fixed aspect-ratio slot, real `alt` text, and hide the slot
+  on error so the layout stays clean instead of showing a broken icon.
+- Show the totals the agent gave. Only compute a sum when every component is
+  present, and never silently "correct" the agent's arithmetic.
+
+### Keep it fast
+
+- **Lead with the answer** — one or two lines in chat, then the artifact.
+- **One artifact per reply.** Never several.
+- Self-contained: inline CSS/JS, no CDNs, no frameworks, no build step.
+- Charts are **hand-written inline SVG** — no chart libraries.
+- On a follow-up, **update the existing artifact** instead of making a new one.
+
+Before building, read **`references/ui-patterns.md`** (next to this file) for the
+design tokens, component anatomy, and markup skeletons.
 
 ## Error handling
 
