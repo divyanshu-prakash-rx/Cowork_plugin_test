@@ -262,14 +262,20 @@ chosen one. Checkboxes sharing a `name` merge into one comma-separated line.
 
 ---
 
-## Invoice / receipt — money
+## Invoice / cart / receipt — money
 
-**Use when** the reply has line items, amounts, tax, or a total.
+**Use when** the reply has a cart, order, bill, line items, amounts, tax, or a
+total. A shopping cart uses this same component.
 
-**Anatomy:** header (invoice/order id, dates, parties) → line-item table
+**Anatomy:** header (cart/invoice/order id, dates, parties) → line-item table
 (description, qty, unit price, amount) → totals block, right-aligned → status badge.
 
 **Rules**
+- **Render every line item the agent returned.** Never truncate the list, merge
+  rows, or replace it with a sentence — the itemisation is the whole point.
+- Carry the identifiers through (cart id, order id). Users quote them later.
+- Variant/option text ("Blue / Medium") belongs under the item name, not merged
+  into it.
 - Every amount comes from the reply. Compute a subtotal **only** if every line
   amount is present; otherwise show only the totals the agent gave.
 - Never "fix" the agent's math. If the numbers don't add up, render them as given

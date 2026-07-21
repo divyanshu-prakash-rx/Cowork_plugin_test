@@ -104,6 +104,13 @@ or better *seen* — and when it's better seen, build it.
 > **The rule:** render UI when the reply has **structure that plain text
 > flattens**. Stay in text when the reply **is** prose.
 
+**Never flatten structure into a sentence.** If the reply contains line items,
+quantities, prices, IDs, or any repeated fields, **render them — all of them**.
+Collapsing the agent's detail into a one-line summary is a downgrade: the user
+should never have to expand the raw tool output to see what the agent actually
+returned. Your rendering must be *richer* than the agent's plain text, never
+poorer.
+
 Render when the reply contains any of:
 
 | In the reply | Render |
@@ -111,7 +118,7 @@ Render when the reply contains any of:
 | 3+ comparable items with 2+ attributes each (products, listings, results, offers) | **Card grid** |
 | One record with many fields | **Detail card** |
 | The agent asks the user to choose or supply anything (preferences, options, filters, details) | **Choice UI / form** — never a bullet list |
-| Line items, amounts, tax, totals, an order or bill | **Invoice / receipt** |
+| A cart, order, bill, or any line items with quantities, prices or totals | **Invoice / cart summary** |
 | Metrics, series, breakdowns — anything countable worth comparing | **KPI tiles + table + chart** |
 | 2+ options weighed on the same attributes | **Comparison table** |
 | A process with stages, or order/ticket status | **Stepper / timeline** |
@@ -119,8 +126,8 @@ Render when the reply contains any of:
 
 Stay in **plain text** for: a direct answer, a confirmation, a single fact, a
 yes/no, a single open-ended question that lists no options, an error, or a couple
-of sentences of explanation. **Never wrap a one-line answer in a UI** — that is
-slower and worse.
+of sentences of explanation. **Never wrap a one-line answer in a UI** — it adds
+chrome without adding meaning.
 
 ### When the agent asks for input
 
@@ -157,13 +164,33 @@ The UI shows **only what the agent actually returned**.
 - Show the totals the agent gave. Only compute a sum when every component is
   present, and never silently "correct" the agent's arithmetic.
 
-### Keep it fast
+### How to build it
 
-- **Lead with the answer** — one or two lines in chat, then the artifact.
-- **One artifact per reply.** Never several.
-- Self-contained: inline CSS/JS, no CDNs, no frameworks, no build step.
+- **One artifact per reply**, built around a single idea.
+- Self-contained HTML: inline CSS and JS, no CDNs, no frameworks, no build step.
 - Charts are **hand-written inline SVG** — no chart libraries.
-- On a follow-up, **update the existing artifact** instead of making a new one.
+- On a follow-up, **update the existing artifact** rather than making a new one.
+
+### Make it genuinely good
+
+The interface *is* the answer here — build something worth looking at.
+
+- **Hierarchy first.** Every view has one thing that matters most; make it the
+  largest, heaviest, or most saturated element, and let everything else recede.
+  If everything is emphasised, nothing is.
+- **One system throughout.** A single radius, one shadow, one spacing rhythm, one
+  type scale, one accent. Consistency is what separates designed from assembled.
+- **Sweat the details.** Align edges to a grid. Right-align numbers and use
+  tabular figures so digits line up. Group related fields with real whitespace
+  instead of rules and boxes. Give text room to breathe.
+- **Both themes, deliberately.** Light and dark must each look intentional — not
+  one theme with inverted colors.
+- **Responsive.** Fluid down to a phone; wide tables and charts scroll inside
+  their own container so the page itself never scrolls sideways.
+- **Accessible.** Semantic elements, a label on every input, visible focus rings,
+  real `alt` text, and text that stays legible against its background.
+- **Restraint.** No decorative gradients, no emoji as icons, no borders where
+  spacing would do. Confidence reads as calm, not busy.
 
 Before building, read **`references/ui-patterns.md`** (next to this file) for the
 design tokens, component anatomy, and markup skeletons.
