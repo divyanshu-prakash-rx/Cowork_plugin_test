@@ -6,10 +6,304 @@ description: >
   "find an agent that can do X", "ask Phinite", or routes a domain-specific
   question to a specialized AI agent on the Phinite platform.
 metadata:
-  version: "2.2.0"
+  version: "3.0.0"
 ---
 
-## Authentication
+# STOP — render before you reply
+
+**Every `call_agent` reply must be checked against the render table below BEFORE
+you write anything back to the user.**
+
+If it matches a row: **build the artifact first**, then write one or two short
+lines of chat around it. Do **not** answer in prose and then offer to make a UI.
+Do **not** re-type the agent's data as a bulleted list — a bullet list of items,
+options, or prices is always the wrong answer.
+
+Bullet lists and one-line summaries are the two failure modes. Neither is
+acceptable when the reply has structure.
+
+## The render table
+
+| If the reply contains | Build |
+|---|---|
+| 2+ items, products, variants, listings, results, or offers | **Card grid** |
+| The agent asks the user to choose or supply anything | **Choice form** — never a bullet list |
+| A cart, order, bill, line items, quantities, prices, totals | **Cart / invoice** |
+| Metrics, series, breakdowns, anything countable | **KPI tiles + table + chart** |
+| One record with many fields | **Detail card** |
+| 2+ options weighed on the same attributes | **Comparison table** |
+| Stages, progress, or order/ticket status | **Stepper** |
+| Dated or timed entries (itinerary, schedule, slots) | **Schedule** |
+
+**Stay in plain text only for:** a direct answer, a confirmation, a single fact,
+a yes/no, one open-ended question that lists no options, or an error. Never wrap
+a one-line answer in a UI.
+
+## Two rules that override everything
+
+**1. Never flatten.** If the reply has line items, quantities, prices, IDs, or
+repeated fields, render **all of them**. Your output must be *richer* than the
+agent's plain text, never poorer. The user should never need to expand the raw
+tool output to see what the agent actually said.
+
+**2. Never invent.** Show only what the agent returned. A missing field is left
+out of the layout entirely — no placeholders, no `N/A`, no sample rows, no stock
+images, no guessed prices. Show the totals the agent gave; only compute a sum if
+every component is present, and never silently "correct" its arithmetic.
+
+---
+
+# Base styles
+
+Paste this into every artifact, unchanged. It is the whole design system.
+
+```html
+<style>
+:root{
+  --bg:#fff; --surface:#fff; --raised:#f6f7f9;
+  --text:#14161a; --muted:#5b636e; --border:#e3e6eb;
+  --accent:#4f46e5; --pos:#0e8a5f; --neg:#c53434; --warn:#a76a12;
+  --c1:#4f46e5; --c2:#0ea5a4; --c3:#e08a1e; --c4:#c0468c; --c5:#3b82f6;
+  --r:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.10);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115; --surface:#161920; --raised:#1c202a;
+  --text:#e8eaee; --muted:#98a1ae; --border:#282d38;
+  --accent:#8f8bf7; --pos:#3ddc97; --neg:#ff6b6b; --warn:#e3b341;
+  --c1:#8f8bf7; --c2:#2dd4bf; --c3:#f0b429; --c4:#f472b6; --c5:#60a5fa;
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1115; --surface:#161920; --raised:#1c202a;
+  --text:#e8eaee; --muted:#98a1ae; --border:#282d38;
+  --accent:#8f8bf7; --pos:#3ddc97; --neg:#ff6b6b; --warn:#e3b341;
+  --c1:#8f8bf7; --c2:#2dd4bf; --c3:#f0b429; --c4:#f472b6; --c5:#60a5fa;
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:24px;background:var(--bg);color:var(--text);
+ font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:960px;margin:0 auto}
+h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin:0 0 20px}
+.card{background:var(--surface);border:1px solid var(--border);
+ border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;
+ font-weight:600;background:var(--raised);color:var(--muted);border:1px solid var(--border)}
+.badge.pos{color:var(--pos)} .badge.neg{color:var(--neg)} .badge.warn{color:var(--warn)}
+.chip{display:inline-block;padding:2px 8px;margin:2px 4px 2px 0;border-radius:6px;
+ font-size:12px;background:var(--raised);color:var(--muted);border:1px solid var(--border)}
+.thumb{aspect-ratio:4/3;background:var(--raised);border-radius:8px;overflow:hidden;margin:0 0 12px}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+a{color:var(--accent)}
+.opt{display:inline-block;margin:0 8px 8px 0;cursor:pointer}
+.opt input{position:absolute;opacity:0;width:0}
+.opt span{display:inline-block;padding:7px 14px;border:1px solid var(--border);
+ border-radius:999px;background:var(--raised);font-size:14px}
+.opt input:checked+span{background:var(--accent);color:#fff;border-color:var(--accent)}
+.opt input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.btn{padding:9px 16px;border:0;border-radius:8px;background:var(--accent);
+ color:#fff;font:inherit;font-weight:600;cursor:pointer}
+</style>
+```
+
+**Images:** use the URLs the agent returned. Always wrap in a fixed-ratio
+`.thumb` and add `onerror="this.closest('.thumb').remove()"` so a blocked image
+collapses cleanly instead of leaving a broken icon. Never invent an image URL.
+
+---
+
+# Examples
+
+## 1. Products / variants → card grid
+
+The agent lists items with prices and stock. **Never** a bullet list.
+
+```html
+<div class="wrap">
+  <h1>Classic Tee</h1>
+  <p class="sub">4 variants available</p>
+  <div class="grid">
+
+    <article class="card">
+      <div class="thumb">
+        <img src="IMAGE_URL" alt="Classic Tee Blue Medium"
+             onerror="this.closest('.thumb').remove()">
+      </div>
+      <h3 style="margin:0 0 6px;font-size:15px">Blue / Medium</h3>
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <span style="font-size:20px;font-weight:650;font-variant-numeric:tabular-nums">$2.60</span>
+        <span style="color:var(--muted);text-decoration:line-through;font-size:13px">$3.20</span>
+      </div>
+      <div style="margin-top:10px"><span class="badge pos">In stock</span></div>
+    </article>
+
+  </div>
+</div>
+```
+
+Rules: same fields in every card; omit a field the item doesn't have (don't leave
+a gap); price is the visual anchor; only show a struck-through list price if the
+agent gave one; `--pos` for in stock, `--warn` for limited, `--neg` for out.
+
+## 2. Agent asks the user to choose → choice form
+
+When the agent names options ("Blue, Red, Black" / "S, M, L"), they must be
+**clickable**. Ask for everything outstanding in one form, then send the answers
+back in a **single** `call_agent` carrying `task_id`.
+
+```html
+<form class="card wrap" id="f" onsubmit="return false">
+  <fieldset style="border:0;padding:0;margin:0 0 16px">
+    <legend style="font-size:13px;color:var(--muted);padding:0 0 6px">Color *</legend>
+    <label class="opt"><input type="radio" name="Color" value="Blue" required><span>Blue</span></label>
+    <label class="opt"><input type="radio" name="Color" value="Red"><span>Red</span></label>
+    <label class="opt"><input type="radio" name="Color" value="Black"><span>Black</span></label>
+  </fieldset>
+
+  <fieldset style="border:0;padding:0;margin:0 0 16px">
+    <legend style="font-size:13px;color:var(--muted);padding:0 0 6px">Size *</legend>
+    <label class="opt"><input type="radio" name="Size" value="Small" required><span>Small</span></label>
+    <label class="opt"><input type="radio" name="Size" value="Medium"><span>Medium</span></label>
+  </fieldset>
+
+  <label for="q" style="display:block;font-size:13px;color:var(--muted);margin:0 0 6px">Quantity *</label>
+  <input id="q" name="Quantity" type="number" min="1" value="1" required
+    style="width:110px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
+           background:var(--raised);color:var(--text);font:inherit;margin-bottom:16px">
+
+  <div><button type="button" class="btn" onclick="cp()">Copy for Claude</button>
+    <span id="ok" style="margin-left:10px;color:var(--pos);font-size:13px"></span></div>
+</form>
+<script>
+function cp(){
+  const vals={};
+  document.querySelectorAll('#f input,#f select,#f textarea').forEach(e=>{
+    if((e.type==='radio'||e.type==='checkbox') && !e.checked) return;
+    const v=(e.value||'').trim(); if(!v||!e.name) return;
+    vals[e.name]=vals[e.name]?vals[e.name]+', '+v:v;
+  });
+  const out=Object.keys(vals).map(k=>k+': '+vals[k]).join('\n');
+  navigator.clipboard.writeText(out);
+  document.getElementById('ok').textContent = out ? 'Copied — paste it back in chat' : 'Nothing filled in yet';
+}
+</script>
+```
+
+Control by question type: 2–5 named options → radio chips; 6+ → `<select>`; many
+allowed → checkboxes; quantity/budget → `number`; date → `date`; open text →
+`input`/`textarea`. If the agent's list ends in "etc.", add an **Other** chip
+with a free-text field. Ask for **only** what the agent asked for.
+
+The `!e.checked` guard matters — without it every radio option gets copied
+instead of the chosen one.
+
+## 3. Cart / order / invoice
+
+Render **every** line item. Carry the cart/order id through. Keep variant text
+("Blue / Medium") under the item name.
+
+```html
+<div class="card wrap">
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div><h1 style="margin:0">Your cart</h1>
+      <div class="sub" style="margin:2px 0 0">cart_1cf221341ffc</div></div>
+    <span class="badge pos">Ready</span>
+  </div>
+
+  <div class="scroll" style="margin:18px 0">
+    <table>
+      <thead><tr><th>Item</th><th class="num">Qty</th>
+        <th class="num">Unit</th><th class="num">Subtotal</th></tr></thead>
+      <tbody><tr>
+        <td>Classic Tee<div style="color:var(--muted);font-size:12px">Blue / Medium</div></td>
+        <td class="num">2</td><td class="num">$2.60</td><td class="num">$5.20</td>
+      </tr></tbody>
+    </table>
+  </div>
+
+  <div style="margin-left:auto;max-width:280px;font-size:14px">
+    <div style="display:flex;justify-content:space-between;padding:10px 0 0;
+      border-top:1px solid var(--border);font-size:17px;font-weight:700">
+      <span>Total</span><span class="num">$5.20</span></div>
+    <div style="color:var(--muted);font-size:12px;text-align:right">USD</div>
+  </div>
+</div>
+```
+
+## 4. Data → KPI tiles + chart + table
+
+Order: tiles (headline numbers) → chart (the shape) → table (exact values).
+Always include the table; it proves the chart is honest.
+
+```html
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+  <div class="card">
+    <div style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em">Orders</div>
+    <div style="font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:4px">1,284</div>
+  </div>
+</div>
+```
+
+Charts are hand-written inline SVG — no libraries. Plot area x 40→470, baseline
+y=170, max height 140. For each value: `h = round(v/max*140)`, `y = 170 - h`.
+
+```html
+<svg viewBox="0 0 480 200" role="img" aria-label="Orders by month"
+     style="width:100%;height:auto;display:block">
+  <line x1="40" y1="170" x2="470" y2="170" stroke="var(--border)"/>
+  <rect x="52" y="60" width="34" height="110" rx="4" fill="var(--c1)"/>
+  <text x="69" y="187" text-anchor="middle" font-size="11" fill="var(--muted)">Jan</text>
+</svg>
+```
+
+Line chart: `x = 40 + i*(430/(n-1))`, `y = 170 - v/max*140`, drawn as a
+`<polyline>`. Bar for categories, line for time series, donut for a single share.
+Only show a delta (`+12%`) if the agent gave one; never color a number that has
+no stated direction.
+
+## 5. Other shapes
+
+- **Detail card** — title + status badge, then a two-column `<dl>` of fields.
+- **Comparison table** — rows = attributes, columns = options. Only mark a winner
+  if the agent named one.
+- **Stepper** — an `<ol>` with a coloured dot per stage: `--pos` done,
+  `--accent` current, `--border` pending. Use the agent's wording for the state.
+- **Schedule** — group by day; time in a fixed-width left column, entry right.
+
+---
+
+# Quality bar
+
+The interface *is* the answer — build something worth looking at.
+
+- **Hierarchy.** One thing matters most per view; make it largest or most
+  saturated and let the rest recede. If everything is emphasised, nothing is.
+- **One system.** A single radius, shadow, spacing rhythm, type scale, accent.
+- **Details.** Align to a grid, right-align numbers with tabular figures, prefer
+  whitespace over borders, give text room.
+- **Both themes** look deliberate, not one inverted into the other.
+- **Responsive** to phone width; wide tables/charts scroll in `.scroll` so the
+  page never scrolls sideways.
+- **Accessible** — semantic elements, a label per input, visible focus, real
+  `alt` text, legible contrast.
+- **Restraint** — no decorative gradients, no emoji as icons, no borders where
+  spacing will do.
+
+Build one artifact per reply, self-contained (inline CSS/JS, no CDNs, no
+frameworks). On a follow-up, update the existing artifact rather than making a
+new one.
+
+---
+
+# Authentication
 
 The Phinite tools authenticate via **OAuth** — the user signs into their Phinite
 account when they connect the plugin. There is no key to enter and nothing to
@@ -18,9 +312,7 @@ paste in chat.
 If a tool returns an auth error (`401`, "unauthorized", or a connect/sign-in
 prompt), tell the user to **connect the Phinite plugin and sign in**, then retry.
 
-## Tools
-
-The plugin exposes three tools:
+# Tools
 
 | Tool | Use it to |
 |------|-----------|
@@ -43,8 +335,6 @@ for `call_agent`. If `discover_agents` returns nothing relevant, fall back to
 `list_agents`.
 
 ## Talking to an agent — `call_agent`
-
-Arguments:
 
 | Argument | Required | Notes |
 |----------|----------|-------|
@@ -87,115 +377,17 @@ mid-conversation; that's what keeps the agent's memory.
 > Only `task_id` is passed back to continue — `call_agent` has no `context_id`
 > argument (the server tracks context internally).
 
-## Routing rules
+# Routing rules
 
 - Route domain questions directly to the matching agent without asking which one.
 - If it's unclear which agent fits, `discover_agents` (or `list_agents`), pick the
   best match by `registry_id`, then `call_agent`.
-- Relay the agent's answer faithfully; don't summarise or rewrite unless asked —
-  see **Presenting the answer** for how to present it.
+- Relay the agent's answer **completely and faithfully** — never drop or soften
+  its content. "Faithfully" means rendering all of it in the right shape, not
+  retyping it as prose. See the render table above.
 - Never answer from your own knowledge what falls within an agent's domain.
 
-## Presenting the answer
-
-Agent replies arrive as **plain text**. Decide whether that text is better *read*
-or better *seen* — and when it's better seen, build it.
-
-> **The rule:** render UI when the reply has **structure that plain text
-> flattens**. Stay in text when the reply **is** prose.
-
-**Never flatten structure into a sentence.** If the reply contains line items,
-quantities, prices, IDs, or any repeated fields, **render them — all of them**.
-Collapsing the agent's detail into a one-line summary is a downgrade: the user
-should never have to expand the raw tool output to see what the agent actually
-returned. Your rendering must be *richer* than the agent's plain text, never
-poorer.
-
-Render when the reply contains any of:
-
-| In the reply | Render |
-|---|---|
-| 3+ comparable items with 2+ attributes each (products, listings, results, offers) | **Card grid** |
-| One record with many fields | **Detail card** |
-| The agent asks the user to choose or supply anything (preferences, options, filters, details) | **Choice UI / form** — never a bullet list |
-| A cart, order, bill, or any line items with quantities, prices or totals | **Invoice / cart summary** |
-| Metrics, series, breakdowns — anything countable worth comparing | **KPI tiles + table + chart** |
-| 2+ options weighed on the same attributes | **Comparison table** |
-| A process with stages, or order/ticket status | **Stepper / timeline** |
-| Dated or timed entries (itinerary, schedule, slots) | **Schedule** |
-
-Stay in **plain text** for: a direct answer, a confirmation, a single fact, a
-yes/no, a single open-ended question that lists no options, an error, or a couple
-of sentences of explanation. **Never wrap a one-line answer in a UI** — it adds
-chrome without adding meaning.
-
-### When the agent asks for input
-
-If the reply asks the user to choose or supply anything, **do not restate it as a
-bulleted list** — that forces the user to type their answers back by hand.
-
-1. **Enumerated options → multiple choice.** When the agent names the options
-   ("dairy, almond, oat, soy", "whole, 2%, skim"), present them as **selectable
-   choices**, one question per attribute. If the host has a question tool with
-   choice support, prefer it — answers return straight into the conversation with
-   nothing to copy or paste.
-2. **Otherwise render a form artifact** — for many fields at once, or for values
-   that aren't a fixed set (dates, quantities, budgets, free text).
-3. If the agent's list ends in "etc." or "and so on", the set is **open** — add an
-   **Other** choice with a free-text field.
-4. Ask for **only** what the agent asked for. Never invent extra fields, and never
-   drop one because it seems obvious.
-5. Gather **all** outstanding questions in one pass, then send the answers back in
-   a **single** `call_agent` (carrying `task_id`) — not one call per answer.
-
-### Never invent data
-
-The UI shows **only what the agent actually returned**.
-
-- Never add prices, ratings, images, dates, rows, or "sample" values.
-- A field missing from the reply is **left out of the layout** — no placeholders,
-  no empty states, no `N/A` padding.
-- **Use the image URLs the agent returns.** Render them (product photos,
-  thumbnails, avatars) — they carry real meaning. Never invent an image URL or
-  substitute stock imagery for a missing one.
-- Build so a card still reads if an image fails to load (some viewers block
-  remote images): a fixed aspect-ratio slot, real `alt` text, and hide the slot
-  on error so the layout stays clean instead of showing a broken icon.
-- Show the totals the agent gave. Only compute a sum when every component is
-  present, and never silently "correct" the agent's arithmetic.
-
-### How to build it
-
-- **One artifact per reply**, built around a single idea.
-- Self-contained HTML: inline CSS and JS, no CDNs, no frameworks, no build step.
-- Charts are **hand-written inline SVG** — no chart libraries.
-- On a follow-up, **update the existing artifact** rather than making a new one.
-
-### Make it genuinely good
-
-The interface *is* the answer here — build something worth looking at.
-
-- **Hierarchy first.** Every view has one thing that matters most; make it the
-  largest, heaviest, or most saturated element, and let everything else recede.
-  If everything is emphasised, nothing is.
-- **One system throughout.** A single radius, one shadow, one spacing rhythm, one
-  type scale, one accent. Consistency is what separates designed from assembled.
-- **Sweat the details.** Align edges to a grid. Right-align numbers and use
-  tabular figures so digits line up. Group related fields with real whitespace
-  instead of rules and boxes. Give text room to breathe.
-- **Both themes, deliberately.** Light and dark must each look intentional — not
-  one theme with inverted colors.
-- **Responsive.** Fluid down to a phone; wide tables and charts scroll inside
-  their own container so the page itself never scrolls sideways.
-- **Accessible.** Semantic elements, a label on every input, visible focus rings,
-  real `alt` text, and text that stays legible against its background.
-- **Restraint.** No decorative gradients, no emoji as icons, no borders where
-  spacing would do. Confidence reads as calm, not busy.
-
-Before building, read **`references/ui-patterns.md`** (next to this file) for the
-design tokens, component anatomy, and markup skeletons.
-
-## Error handling
+# Error handling
 
 - `401` / connect prompt → not signed in (or session expired); tell the user to
   connect the Phinite plugin and sign in, then retry.
