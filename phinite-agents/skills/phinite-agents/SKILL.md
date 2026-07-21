@@ -6,7 +6,7 @@ description: >
   "find an agent that can do X", "ask Phinite", or routes a domain-specific
   question to a specialized AI agent on the Phinite platform.
 metadata:
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # STOP — render before you reply
@@ -50,6 +50,27 @@ tool output to see what the agent actually said.
 out of the layout entirely — no placeholders, no `N/A`, no sample rows, no stock
 images, no guessed prices. Show the totals the agent gave; only compute a sum if
 every component is present, and never silently "correct" its arithmetic.
+
+## Build small
+
+Write the **smallest markup that does the job** — a component, not a page. How
+long the reply takes is set almost entirely by how much you type, so:
+
+- **Use the classes below; never repeat inline `style=` per item.** Style once,
+  then each card is ~5 short tags and each table row is one line. This is the
+  single biggest saving when there are many items.
+- **Copy only the CSS you use** — the tokens plus the few rules your component
+  needs, not the whole block.
+- **One component per reply.** No page header, subtitle, intro paragraph, or
+  wrapper sections unless they carry meaning.
+- **Skip anything decorative** — no chart when the table already shows it, no
+  summary tiles above a three-row table, no icons.
+- Prefer a plain `<table>` over cards when the data is uniform; it is smaller to
+  write and easier to scan.
+
+**Small means less markup per item — never less content.** Dropping items,
+merging rows, or truncating a list to save time is wrong (see *Never flatten*).
+Ten products still get ten cards; each card is just tiny.
 
 ---
 
@@ -111,6 +132,19 @@ a{color:var(--accent)}
 .opt input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 .btn{padding:9px 16px;border:0;border-radius:8px;background:var(--accent);
  color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.card h3{margin:0 0 6px;font-size:15px}
+.price{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+.was{color:var(--muted);text-decoration:line-through;font-size:13px;margin-left:6px}
+.var{color:var(--muted);font-size:12px}
+.cap{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+.kpi{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:4px}
+.tot{display:flex;justify-content:space-between;padding:10px 0 0;
+ border-top:1px solid var(--border);font-size:17px;font-weight:700}
+.lbl{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+.inp{padding:9px 11px;border:1px solid var(--border);border-radius:8px;
+ background:var(--raised);color:var(--text);font:inherit}
+fieldset{border:0;padding:0;margin:0 0 16px}
+legend{font-size:13px;color:var(--muted);padding:0 0 6px}
 </style>
 ```
 
@@ -129,25 +163,22 @@ The agent lists items with prices and stock. **Never** a bullet list.
 ```html
 <div class="wrap">
   <h1>Classic Tee</h1>
-  <p class="sub">4 variants available</p>
   <div class="grid">
 
     <article class="card">
-      <div class="thumb">
-        <img src="IMAGE_URL" alt="Classic Tee Blue Medium"
-             onerror="this.closest('.thumb').remove()">
-      </div>
-      <h3 style="margin:0 0 6px;font-size:15px">Blue / Medium</h3>
-      <div style="display:flex;align-items:baseline;gap:8px">
-        <span style="font-size:20px;font-weight:650;font-variant-numeric:tabular-nums">$2.60</span>
-        <span style="color:var(--muted);text-decoration:line-through;font-size:13px">$3.20</span>
-      </div>
-      <div style="margin-top:10px"><span class="badge pos">In stock</span></div>
+      <div class="thumb"><img src="IMAGE_URL" alt="Blue / Medium"
+           onerror="this.closest('.thumb').remove()"></div>
+      <h3>Blue / Medium</h3>
+      <div><span class="price">$2.60</span><span class="was">$3.20</span></div>
+      <span class="badge pos">In stock</span>
     </article>
 
   </div>
 </div>
 ```
+
+That is the whole card — repeat only those five lines per item. Every item must
+look identical in structure; omit a line when the agent didn't give that value.
 
 Rules: same fields in every card; omit a field the item doesn't have (don't leave
 a gap); price is the visual anchor; only show a struck-through list price if the
@@ -161,26 +192,25 @@ back in a **single** `call_agent` carrying `task_id`.
 
 ```html
 <form class="card wrap" id="f" onsubmit="return false">
-  <fieldset style="border:0;padding:0;margin:0 0 16px">
-    <legend style="font-size:13px;color:var(--muted);padding:0 0 6px">Color *</legend>
+  <fieldset>
+    <legend>Color *</legend>
     <label class="opt"><input type="radio" name="Color" value="Blue" required><span>Blue</span></label>
     <label class="opt"><input type="radio" name="Color" value="Red"><span>Red</span></label>
     <label class="opt"><input type="radio" name="Color" value="Black"><span>Black</span></label>
   </fieldset>
 
-  <fieldset style="border:0;padding:0;margin:0 0 16px">
-    <legend style="font-size:13px;color:var(--muted);padding:0 0 6px">Size *</legend>
+  <fieldset>
+    <legend>Size *</legend>
     <label class="opt"><input type="radio" name="Size" value="Small" required><span>Small</span></label>
     <label class="opt"><input type="radio" name="Size" value="Medium"><span>Medium</span></label>
   </fieldset>
 
-  <label for="q" style="display:block;font-size:13px;color:var(--muted);margin:0 0 6px">Quantity *</label>
-  <input id="q" name="Quantity" type="number" min="1" value="1" required
-    style="width:110px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;
-           background:var(--raised);color:var(--text);font:inherit;margin-bottom:16px">
+  <label class="lbl" for="q">Quantity *</label>
+  <input class="inp" id="q" name="Quantity" type="number" min="1" value="1" required
+         style="width:110px;margin-bottom:16px">
 
-  <div><button type="button" class="btn" onclick="cp()">Copy for Claude</button>
-    <span id="ok" style="margin-left:10px;color:var(--pos);font-size:13px"></span></div>
+  <button type="button" class="btn" onclick="cp()">Copy for Claude</button>
+  <span id="ok" class="var"></span>
 </form>
 <script>
 function cp(){
@@ -212,31 +242,25 @@ Render **every** line item. Carry the cart/order id through. Keep variant text
 
 ```html
 <div class="card wrap">
-  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
-    <div><h1 style="margin:0">Your cart</h1>
-      <div class="sub" style="margin:2px 0 0">cart_1cf221341ffc</div></div>
-    <span class="badge pos">Ready</span>
-  </div>
+  <h1>Your cart</h1>
+  <p class="sub">cart_1cf221341ffc</p>
 
-  <div class="scroll" style="margin:18px 0">
+  <div class="scroll">
     <table>
       <thead><tr><th>Item</th><th class="num">Qty</th>
         <th class="num">Unit</th><th class="num">Subtotal</th></tr></thead>
-      <tbody><tr>
-        <td>Classic Tee<div style="color:var(--muted);font-size:12px">Blue / Medium</div></td>
-        <td class="num">2</td><td class="num">$2.60</td><td class="num">$5.20</td>
-      </tr></tbody>
+      <tbody>
+        <tr><td>Classic Tee<div class="var">Blue / Medium</div></td>
+          <td class="num">2</td><td class="num">$2.60</td><td class="num">$5.20</td></tr>
+      </tbody>
     </table>
   </div>
 
-  <div style="margin-left:auto;max-width:280px;font-size:14px">
-    <div style="display:flex;justify-content:space-between;padding:10px 0 0;
-      border-top:1px solid var(--border);font-size:17px;font-weight:700">
-      <span>Total</span><span class="num">$5.20</span></div>
-    <div style="color:var(--muted);font-size:12px;text-align:right">USD</div>
-  </div>
+  <div class="tot"><span>Total</span><span class="num">$5.20</span></div>
 </div>
 ```
+
+One `<tr>` per line item — four short cells. Never merge or drop rows.
 
 ## 4. Data → KPI tiles + chart + table
 
@@ -244,11 +268,8 @@ Order: tiles (headline numbers) → chart (the shape) → table (exact values).
 Always include the table; it proves the chart is honest.
 
 ```html
-<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-  <div class="card">
-    <div style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em">Orders</div>
-    <div style="font-size:26px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:4px">1,284</div>
-  </div>
+<div class="grid">
+  <div class="card"><div class="cap">Orders</div><div class="kpi">1,284</div></div>
 </div>
 ```
 
